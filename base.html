@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chụp Ảnh Làm Mờ Nền</title>
-    <!-- Tải Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tải thư viện MediaPipe Selfie Segmentation (Đã chuyển sang phiên bản .js để tránh lỗi Wasm) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
     <style>
         /* Thiết lập font Inter */
@@ -34,15 +32,11 @@
     <div class="w-full max-w-xl bg-white shadow-2xl rounded-xl p-6">
         <h1 class="text-3xl font-bold text-center text-primary-blue mb-6">📸 Ứng Dụng Làm Mờ Nền</h1>
         
-        <!-- Khu vực hiển thị camera và canvas -->
-        <div class="relative w-full aspect-[4/3] rounded-lg overflow-hidden mb-6 border-4 border-gray-300 bg-black flex items-center justify-center">
-            <!-- Video gốc (bị ẩn, dùng làm nguồn cho MediaPipe) -->
+        <div class="relative w-full rounded-lg overflow-hidden mb-6 border-4 border-gray-300 bg-black flex items-center justify-center">
             <video id="videoElement" playsinline autoplay></video>
             
-            <!-- Canvas hiển thị kết quả đã làm mờ -->
-            <canvas id="outputCanvas" class="w-full h-full transform transition-transform duration-300"></canvas>
+            <canvas id="outputCanvas" class="w-full h-auto transform transition-transform duration-300"></canvas>
             
-            <!-- Loading indicator -->
             <div id="loadingIndicator" class="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center text-lg font-semibold text-primary-blue z-10">
                 <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-primary-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -51,12 +45,10 @@
                 <span>Đang tải MediaPipe...</span>
             </div>
 
-            <!-- Message Box -->
             <div id="messageBox" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-xl text-sm font-medium z-20"></div>
 
         </div>
 
-        <!-- Thanh điều khiển -->
         <div class="flex flex-col space-y-4">
             <div class="grid grid-cols-2 gap-4">
                 <button id="toggleCamButton" class="flex items-center justify-center space-x-2 bg-primary-blue text-white py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition duration-150 active:scale-95">
@@ -76,15 +68,12 @@
                 </button>
             </div>
             
-            <!-- THANH ĐIỀU CHỈNH ĐỘ LÀM MỜ MỚI -->
             <div class="p-3 bg-gray-50 rounded-lg shadow-inner">
                 <label for="blurSlider" class="block text-sm font-medium text-gray-700 mb-2">
                     Độ Làm Mờ (Blur): <span id="blurValue" class="font-bold text-primary-blue">10px</span>
                 </label>
                 <input type="range" id="blurSlider" min="0" max="30" value="10" step="1" class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer">
             </div>
-            <!-- KẾT THÚC THANH ĐIỀU CHỈNH -->
-
             <button id="captureButton" class="flex items-center justify-center space-x-2 bg-red-500 text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-red-600 transition duration-150 active:scale-95">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A.996.996 0 0010 3.379a.996.996 0 00-.707.293L8.293 4.707a1 1 0 01-.707.293H4zm7 5a1 1 0 10-2 0 1 1 0 002 0zm-2 2a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
@@ -92,7 +81,6 @@
                 <span>Chụp Ảnh</span>
             </button>
 
-            <!-- Khu vực kết quả chụp -->
             <div id="captureResult" class="hidden mt-6">
                 <h2 class="text-xl font-semibold mb-3 text-gray-700">Ảnh Đã Chụp:</h2>
                 <img id="capturedImage" class="w-full rounded-lg shadow-md border border-gray-200" alt="Ảnh đã chụp" />
@@ -165,8 +153,8 @@
             const constraints = {
                 video: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
+                    // ĐÃ SỬA: Bỏ giới hạn width/height/aspectRatio để dùng tỉ lệ mặc định của camera
+                    // Điều này cho phép tỉ lệ Canvas khớp với luồng video thực tế
                 }
             };
 
@@ -175,9 +163,11 @@
                 videoElement.srcObject = stream;
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
-                    // Thiết lập kích thước canvas bằng kích thước video
+                    
+                    // Thiết lập kích thước canvas bằng kích thước video thực tế (Self-Scaling)
                     canvasElement.width = videoElement.videoWidth;
                     canvasElement.height = videoElement.videoHeight;
+                    
                     // Bắt đầu xử lý MediaPipe sau khi video đã tải
                     if (segmentation) {
                         onCameraReady();
@@ -204,6 +194,7 @@
         // Đảo ngược hình ảnh camera (lật ngang)
         function toggleFlip() {
             isFlipped = !isFlipped;
+            // Áp dụng lật ngang bằng CSS (ScaleX(-1))
             if (isFlipped) {
                 canvasElement.style.transform = 'scaleX(-1)';
             } else {
@@ -221,7 +212,6 @@
             ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
             // 1. Áp dụng làm mờ (Blur) cho nền
-            // Kỹ thuật 1: Vẽ toàn bộ hình ảnh với hiệu ứng mờ (Background)
             // SỬ DỤNG GIÁ TRỊ LÀM MỜ ĐỘNG (blurRadius)
             ctx.filter = `blur(${blurRadius}px)`; 
             ctx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -274,7 +264,6 @@
             segmentation.setOptions({
                 modelSelection: 1, // 0: general, 1: landscape (mượt hơn)
                 selfieMode: true,  // Quan trọng: Thường lật hình ảnh đầu vào, nhưng chúng ta sẽ xử lý lật bằng CSS.
-                // Chúng ta sẽ tự xử lý hiệu ứng blur thay vì dùng enableSegmentation, nhưng cần segmentation mask.
             });
 
             segmentation.onResults(onResults);
@@ -322,7 +311,8 @@
             initializeMediaPipe();
 
             if (hasDevices) {
-                await startCamera(cameraDevices[currentDeviceIdIndex].deviceId);
+                // Khởi động camera với thiết bị đầu tiên
+                await startCamera(cameraDevices[currentDeviceIdIndex].deviceId); 
             } else {
                  loadingIndicator.querySelector('span').textContent = 'Không có camera. Vui lòng kiểm tra quyền truy cập.';
             }
@@ -331,7 +321,6 @@
             blurSlider.addEventListener('input', (event) => {
                 blurRadius = parseInt(event.target.value);
                 blurValueDisplay.textContent = `${blurRadius}px`;
-                // Vòng lặp requestAnimationFrame sẽ tự động cập nhật hiệu ứng.
             });
 
             // Gắn sự kiện cho các nút
